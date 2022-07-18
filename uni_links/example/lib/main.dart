@@ -222,7 +222,7 @@ class _MyAppState extends State<MyApp> with SingleTickerProviderStateMixin {
   }
 
   void _showSnackBar(String msg) {
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = _scaffoldKey.currentContext;
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
