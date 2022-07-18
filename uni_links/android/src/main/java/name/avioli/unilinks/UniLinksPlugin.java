@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
-import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
@@ -26,10 +25,10 @@ import io.flutter.plugin.common.PluginRegistry;
 
 public class UniLinksPlugin
         implements FlutterPlugin,
-                MethodChannel.MethodCallHandler,
-                EventChannel.StreamHandler,
-                ActivityAware,
-                PluginRegistry.NewIntentListener {
+        MethodChannel.MethodCallHandler,
+        EventChannel.StreamHandler,
+        ActivityAware,
+        PluginRegistry.NewIntentListener {
 
     private static final String MESSAGES_CHANNEL = "uni_links/messages";
     private static final String EVENTS_CHANNEL = "uni_links/events";
@@ -51,34 +50,33 @@ public class UniLinksPlugin
         return false;
     }
 
-    private void forwardToBrowser(Intent i) {
+    private void forwardToBrowser(@NonNull Intent i) {
         Intent intent = new Intent();
-        intent.setAction(android.content.Intent.ACTION_VIEW);
-        intent.setDataAndType(i.getData(), i.getType());
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.setData(i.getData());
         List<ResolveInfo> activities = context.getPackageManager().queryIntentActivities(intent, 0);
-        ArrayList<Intent> targetIntents = new ArrayList<Intent>();
-        String thisPackageName = context.getApplicationContext().getPackageName();
+        ArrayList<Intent> targetIntents = new ArrayList<>();
+        String thisPackageName = i.getPackage(); //
         for (ResolveInfo currentInfo : activities) {
             String packageName = currentInfo.activityInfo.packageName;
-            if (!thisPackageName.equals(packageName)) {
+            if (thisPackageName == null || !thisPackageName.equals(packageName)) {
                 Intent targetIntent = new Intent(android.content.Intent.ACTION_VIEW);
-                targetIntent.setDataAndType(intent.getData(),intent.getType());
+                targetIntent.setDataAndType(intent.getData(), intent.getType());
                 targetIntent.setPackage(intent.getPackage());
                 targetIntent.setComponent(new ComponentName(packageName, currentInfo.activityInfo.name));
                 targetIntents.add(targetIntent);
             }
         }
-        if(targetIntents.size() > 0) {
+        if (targetIntents.size() > 0) {
             Intent chooserIntent = Intent.createChooser(targetIntents.remove(0), "Open with");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetIntents.toArray(new Parcelable[] {}));
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetIntents.toArray());
             context.startActivity(chooserIntent);
             try {
                 ((Activity) context).finish();
             } catch (Exception e) {
-                // do nothing
+                //
             }
         }
-
     }
 
     private void handleIntent(Context context, Intent intent) {
@@ -129,7 +127,9 @@ public class UniLinksPlugin
         eventChannel.setStreamHandler(plugin);
     }
 
-    /** Plugin registration. */
+    /**
+     * Plugin registration.
+     */
     public static void registerWith(@NonNull PluginRegistry.Registrar registrar) {
         // Detect if we've been launched in background
         if (registrar.activity() == null) {
@@ -141,7 +141,7 @@ public class UniLinksPlugin
         register(registrar.messenger(), instance);
 
         Intent i = registrar.activity().getIntent();
-        if(instance.isShowOnBrowser(i)) {
+        if (instance.isShowOnBrowser(i)) {
             instance.forwardToBrowser(i);
         } else {
             instance.handleIntent(registrar.context(), i);
@@ -151,7 +151,8 @@ public class UniLinksPlugin
     }
 
     @Override
-    public void onDetachedFromEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {}
+    public void onDetachedFromEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
+    }
 
     @Override
     public void onListen(Object o, EventChannel.EventSink eventSink) {
@@ -176,7 +177,11 @@ public class UniLinksPlugin
 
     @Override
     public boolean onNewIntent(Intent intent) {
-        this.handleIntent(context, intent);
+        if (isShowOnBrowser(intent)) {
+            this.forwardToBrowser(intent);
+        } else {
+            this.handleIntent(context, intent);
+        }
         return false;
     }
 
@@ -184,7 +189,7 @@ public class UniLinksPlugin
     public void onAttachedToActivity(@NonNull ActivityPluginBinding activityPluginBinding) {
         activityPluginBinding.addOnNewIntentListener(this);
         Intent i = activityPluginBinding.getActivity().getIntent();
-        if(isShowOnBrowser(i)) {
+        if (isShowOnBrowser(i)) {
             this.forwardToBrowser(i);
         } else {
             this.handleIntent(this.context, i);
@@ -192,14 +197,15 @@ public class UniLinksPlugin
     }
 
     @Override
-    public void onDetachedFromActivityForConfigChanges() {}
+    public void onDetachedFromActivityForConfigChanges() {
+    }
 
     @Override
     public void onReattachedToActivityForConfigChanges(
             @NonNull ActivityPluginBinding activityPluginBinding) {
         activityPluginBinding.addOnNewIntentListener(this);
         Intent i = activityPluginBinding.getActivity().getIntent();
-        if(isShowOnBrowser(i)) {
+        if (isShowOnBrowser(i)) {
             this.forwardToBrowser(i);
         } else {
             this.handleIntent(this.context, i);
