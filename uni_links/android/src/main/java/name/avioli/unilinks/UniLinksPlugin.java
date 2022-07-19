@@ -5,8 +5,12 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 
@@ -52,14 +56,14 @@ public class UniLinksPlugin
 
     private void forwardToBrowser(@NonNull Intent i) {
         Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_VIEW);
-        intent.setData(i.getData());
+        intent.setAction(android.content.Intent.ACTION_VIEW);
+        intent.setDataAndType(i.getData(), i.getType());
         List<ResolveInfo> activities = context.getPackageManager().queryIntentActivities(intent, 0);
-        ArrayList<Intent> targetIntents = new ArrayList<>();
-        String thisPackageName = i.getPackage(); //
+        ArrayList<Intent> targetIntents = new ArrayList<Intent>();
+        String thisPackageName = context.getApplicationContext().getPackageName();
         for (ResolveInfo currentInfo : activities) {
             String packageName = currentInfo.activityInfo.packageName;
-            if (thisPackageName == null || !thisPackageName.equals(packageName)) {
+            if (!thisPackageName.equals(packageName)) {
                 Intent targetIntent = new Intent(android.content.Intent.ACTION_VIEW);
                 targetIntent.setDataAndType(intent.getData(), intent.getType());
                 targetIntent.setPackage(intent.getPackage());
@@ -69,7 +73,8 @@ public class UniLinksPlugin
         }
         if (targetIntents.size() > 0) {
             Intent chooserIntent = Intent.createChooser(targetIntents.remove(0), "Open with");
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetIntents.toArray());
+            chooserIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetIntents.toArray(new Parcelable[]{}));
             context.startActivity(chooserIntent);
             try {
                 ((Activity) context).finish();
@@ -77,6 +82,15 @@ public class UniLinksPlugin
                 //
             }
         }
+    }
+
+    private void setDeepLinkingState(int state) {
+        final String packageName = context.getPackageName();
+        ComponentName compName = new ComponentName(packageName, packageName + ".Deeplinking");
+        context.getApplicationContext().getPackageManager().setComponentEnabledSetting(
+                compName,
+                state,
+                PackageManager.DONT_KILL_APP);
     }
 
     private void handleIntent(Context context, Intent intent) {
@@ -213,5 +227,6 @@ public class UniLinksPlugin
     }
 
     @Override
-    public void onDetachedFromActivity() {}
+    public void onDetachedFromActivity() {
+    }
 }
