@@ -55,32 +55,53 @@ public class UniLinksPlugin
     }
 
     private void forwardToBrowser(@NonNull Intent i) {
-        Intent intent = new Intent();
-        intent.setAction(android.content.Intent.ACTION_VIEW);
-        intent.setDataAndType(i.getData(), i.getType());
-        List<ResolveInfo> activities = context.getPackageManager().queryIntentActivities(intent, 0);
-        ArrayList<Intent> targetIntents = new ArrayList<Intent>();
-        String thisPackageName = context.getApplicationContext().getPackageName();
-        for (ResolveInfo currentInfo : activities) {
-            String packageName = currentInfo.activityInfo.packageName;
-            if (!thisPackageName.equals(packageName)) {
-                Intent targetIntent = new Intent(android.content.Intent.ACTION_VIEW);
-                targetIntent.setDataAndType(intent.getData(), intent.getType());
-                targetIntent.setPackage(intent.getPackage());
-                targetIntent.setComponent(new ComponentName(packageName, currentInfo.activityInfo.name));
-                targetIntents.add(targetIntent);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            Intent intent = new Intent();
+            intent.setAction(android.content.Intent.ACTION_VIEW);
+            intent.setDataAndType(i.getData(), i.getType());
+            List<ResolveInfo> activities = context.getPackageManager().queryIntentActivities(intent, 0);
+            ArrayList<Intent> targetIntents = new ArrayList<Intent>();
+            String thisPackageName = context.getApplicationContext().getPackageName();
+            for (ResolveInfo currentInfo : activities) {
+                String packageName = currentInfo.activityInfo.packageName;
+                if (!thisPackageName.equals(packageName)) {
+                    Intent targetIntent = new Intent(android.content.Intent.ACTION_VIEW);
+                    targetIntent.setDataAndType(intent.getData(), intent.getType());
+                    targetIntent.setPackage(intent.getPackage());
+                    targetIntent.setComponent(new ComponentName(packageName, currentInfo.activityInfo.name));
+                    targetIntents.add(targetIntent);
+                }
+            }
+            if (targetIntents.size() > 0) {
+                Intent chooserIntent = Intent.createChooser(targetIntents.remove(0), "Open with");
+                chooserIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetIntents.toArray(new Parcelable[]{}));
+                context.startActivity(chooserIntent);
+                try {
+                    ((Activity) context).finish();
+                } catch (Exception e) {
+                    //
+                }
             }
         }
-        if (targetIntents.size() > 0) {
-            Intent chooserIntent = Intent.createChooser(targetIntents.remove(0), "Open with");
-            chooserIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetIntents.toArray(new Parcelable[]{}));
-            context.startActivity(chooserIntent);
-            try {
-                ((Activity) context).finish();
-            } catch (Exception e) {
-                //
-            }
+        // from SDK 23, queryIntentActivities only return your activity, so you need to disable you activity before forward to browser and enable it later.
+        else {
+            final PackageManager pm = context.getPackageManager();
+            final ComponentName component = new ComponentName(context.getApplicationContext().getPackageName(), context.getApplicationContext().getPackageName() + ".MainActivity");
+            pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+            Intent webIntent = new Intent(Intent.ACTION_VIEW);
+            webIntent.setDataAndType(i.getData(), i.getType());
+            webIntent.setPackage("com.android.chrome");
+//                webIntent.setComponent(new ComponentName("com.sec.android.app.sbrowser", "com.sec.android.app.sbrowser.SBrowserLauncherActivity"));
+            webIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(webIntent);
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, 0);
+                }
+            }, 500);
         }
     }
 
