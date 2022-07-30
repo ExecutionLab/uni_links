@@ -87,7 +87,7 @@ public class UniLinksPlugin
         // from SDK 23, queryIntentActivities only return your activity, so you need to disable you activity before forward to browser and enable it later.
         else {
             final PackageManager pm = context.getPackageManager();
-            final ComponentName component = new ComponentName(context.getApplicationContext().getPackageName(), context.getApplicationContext().getPackageName() + ".MainActivity");
+            final ComponentName component = new ComponentName(context.getApplicationContext().getPackageName(), "asia.executionlab.guidenavi.MainActivity");
             pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
             Intent webIntent = new Intent(Intent.ACTION_VIEW);
             webIntent.setDataAndType(i.getData(), i.getType());
