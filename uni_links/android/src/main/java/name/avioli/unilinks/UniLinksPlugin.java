@@ -99,7 +99,7 @@ public class UniLinksPlugin
             handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, 0);
+                    pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
                 }
             }, 500);
         }
@@ -107,7 +107,7 @@ public class UniLinksPlugin
 
     private void setDeepLinkingState(int state) {
         final String packageName = context.getPackageName();
-        ComponentName compName = new ComponentName(packageName, packageName + ".Deeplinking");
+        ComponentName compName = new ComponentName(packageName,"asia.executionlab.guidenavi.MainActivity.MainActivity");
         context.getApplicationContext().getPackageManager().setComponentEnabledSetting(
                 compName,
                 state,
